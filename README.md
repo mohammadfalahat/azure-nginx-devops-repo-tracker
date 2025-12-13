@@ -16,6 +16,8 @@ A lightweight Azure DevOps watcher that tracks `main` on every project repositor
 - Node.js 18+
 - Azure DevOps PAT with access to read projects and Git repositories.
 - Komodo GitOps webhook URL.
+- `KOMODO_API_KEY`: Komodo API key sent as `X-Api-Key`.
+- `KOMODO_API_SECRET`: Komodo API secret sent as `X-Api-Secret`.
 
 ## Configuration
 Set the following environment variables:

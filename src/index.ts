@@ -41,7 +41,17 @@ async function main(): Promise<void> {
       continue;
     }
 
-    await handleRepository(project.name, sanitizedName, repo, gitApi, state, config.komodoWebhookUrl, config.runLogFile);
+    await handleRepository(
+      project.name,
+      sanitizedName,
+      repo,
+      gitApi,
+      state,
+      config.komodoWebhookUrl,
+      config.komodoApiKey,
+      config.komodoApiSecret,
+      config.runLogFile
+    );
   }
 
   persistState(config.stateFile, state);
@@ -54,6 +64,8 @@ async function handleRepository(
   gitApi: azdev.IGitApi,
   state: RepoState,
   webhookUrl: string,
+  komodoApiKey: string,
+  komodoApiSecret: string,
   runLogFile: string
 ): Promise<void> {
   if (!repo.id || !repo.project?.id) return;
@@ -98,7 +110,7 @@ async function handleRepository(
     komodoEnvironments = formatKomodoEnvironmentKeys(sanitizedName, changedEnvironments);
     webhookTriggered = true;
 
-    await triggerKomodoWebhook(webhookUrl, {
+    await triggerKomodoWebhook(webhookUrl, komodoApiKey, komodoApiSecret, {
       project: projectName,
       repo: repo.name,
       branch: "main",
@@ -136,9 +148,63 @@ async function handleRepository(
   );
 }
 
-async function triggerKomodoWebhook(url: string, payload: Record<string, unknown>): Promise<void> {
+async function triggerKomodoWebhook(
+  url: string,
+  apiKey: string,
+  apiSecret: string,
+  payload: Record<string, unknown>
+): Promise<void> {
   console.log(`Triggering Komodo webhook: ${url}`);
-  await axios.post(url, payload);
+
+  try {
+    await axios.post(url, payload, {
+      headers: {
+        "Content-Type": "application/json",
+        "X-Api-Key": apiKey,
+        "X-Api-Secret": apiSecret,
+      },
+    });
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status;
+      const statusText = error.response?.statusText ?? "";
+      const responseBody = stringifyResponseBody(error.response?.data);
+
+      console.error(
+        [
+          "Komodo webhook request failed",
+          status ? `status=${status}` : null,
+          statusText ? `statusText=\"${statusText}\"` : null,
+          responseBody ? `body=${responseBody}` : null,
+        ]
+          .filter(Boolean)
+          .join(" ")
+      );
+
+      // Provide a hint for common 405 misconfiguration scenarios (e.g., hitting a POST-only endpoint with GET).
+      if (status === 405) {
+        console.error("The Komodo listener rejected the request (405). Ensure the webhook endpoint expects a POST request.");
+      }
+    }
+
+    throw error;
+  }
+}
+
+function stringifyResponseBody(body: unknown): string {
+  if (body === undefined || body === null) {
+    return "";
+  }
+
+  if (typeof body === "string") {
+    return body;
+  }
+
+  try {
+    return JSON.stringify(body);
+  } catch {
+    return String(body);
+  }
 }
 
 async function detectChangedEnvironments(
