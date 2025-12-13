@@ -5,6 +5,8 @@ export interface TrackerConfig {
   organizationUrl: string;
   personalAccessToken: string;
   komodoWebhookUrl: string;
+  komodoApiKey: string;
+  komodoApiSecret: string;
   stateFile: string;
   runLogFile: string;
 }
@@ -24,6 +26,8 @@ export function loadConfig(): TrackerConfig {
   const organizationUrl = requireEnv("AZDO_ORG_URL");
   const personalAccessToken = requireEnv("AZDO_PAT");
   const komodoWebhookUrl = requireEnv("KOMODO_WEBHOOK_URL");
+  const komodoApiKey = requireEnv("KOMODO_API_KEY");
+  const komodoApiSecret = requireEnv("KOMODO_API_SECRET");
   const stateFile = process.env.STATE_FILE || DEFAULT_STATE_FILE;
   const runLogFile = process.env.RUN_LOG_FILE || DEFAULT_RUN_LOG_FILE;
 
@@ -34,6 +38,8 @@ export function loadConfig(): TrackerConfig {
     organizationUrl,
     personalAccessToken,
     komodoWebhookUrl,
+    komodoApiKey,
+    komodoApiSecret,
     stateFile,
     runLogFile,
   };
